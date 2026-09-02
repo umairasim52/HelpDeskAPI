@@ -1,0 +1,238 @@
+﻿@page "/employees"
+@using HelpDeskBlazor.Models
+@using HelpDeskBlazor.Services
+@using Microsoft.JSInterop
+@inject EmployeeService EmployeeService
+@inject DepartmentService DepartmentService
+@inject IJSRuntime JSRuntime
+
+<div class="card shadow mb-4 border-0">
+    <div class="card-header bg-success text-white">
+        <h3 class="mb-0">👥 Employee Management</h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Add, Update and Delete Employees</p>
+    </div>
+</div>
+
+<div class="card shadow border-0 mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Full Name *</label>
+                <input class="form-control" @bind="employee.FullName" placeholder="Enter full name" />
+                @if (string.IsNullOrWhiteSpace(employee.FullName) && attemptedSubmit)
+                {
+                    <small class="text-danger">Full Name is required</small>
+                }
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Email *</label>
+                <input class="form-control" type="email" @bind="employee.Email" placeholder="Enter email" />
+                @if (string.IsNullOrWhiteSpace(employee.Email) && attemptedSubmit)
+                {
+                    <small class="text-danger">Email is required</small>
+                }
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Phone *</label>
+                <input class="form-control" @bind="employee.Phone" placeholder="Enter phone" />
+                @if (string.IsNullOrWhiteSpace(employee.Phone) && attemptedSubmit)
+                {
+                    <small class="text-danger">Phone is required</small>
+                }
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Department *</label>
+                <select class="form-select" @bind="employee.DepartmentId">
+                    <option value="0">Select Department</option>
+                    @foreach (var dept in departments)
+                    {
+                        <option value="@dept.Id">@dept.DepartmentName</option>
+                    }
+                </select>
+                @if (employee.DepartmentId == 0 && attemptedSubmit)
+                {
+                    <small class="text-danger">Please select a department</small>
+                }
+            </div>
+        </div>
+        <div class="mt-2">
+            @if (employee.Id == 0)
+            {
+                <button class="btn btn-success" @onclick="SaveEmployee">➕ Add Employee</button>
+            }
+            else
+            {
+                <button class="btn btn-primary" @onclick="UpdateEmployee">💾 Update</button>
+                <button class="btn btn-secondary ms-2" @onclick="Cancel">❌ Cancel</button>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert @(messageType == "success" ? "alert-success" : "alert-danger") mt-3">
+                @message
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card shadow border-0">
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+                <p class="mt-2 text-muted">Loading employees...</p>
+            </div>
+        }
+        else if (employees.Count == 0)
+        {
+            <div class="text-center py-4">
+                <h5 class="text-muted">No employees found</h5>
+                <p class="text-muted">Add your first employee using the form above.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Department</th>
+                            <th width="180">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in employees)
+                        {
+                            <tr>
+                                <td>@item.Id</td>
+                                <td>@item.FullName</td>
+                                <td>@item.Email</td>
+                                <td>@item.Phone</td>
+                                <td>@GetDepartmentName(item.DepartmentId)</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" @onclick="(() => Edit(item))">✏️ Edit</button>
+                                    <button class="btn btn-danger btn-sm ms-2" @onclick="(() => Delete(item.Id))">🗑️ Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<Employee> employees = new();
+    private List<Department> departments = new();
+    private Employee employee = new();
+    private bool isLoading = true;
+    private bool attemptedSubmit = false;
+    private string message = "";
+    private string messageType = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDepartments();
+        await Load();
+    }
+
+    private async Task LoadDepartments()
+    {
+        try { departments = await DepartmentService.GetDepartments(); }
+        catch (Exception ex) { message = $"❌ Error: {ex.Message}"; messageType = "error"; }
+    }
+
+    private async Task Load()
+    {
+        isLoading = true;
+        try { employees = await EmployeeService.GetEmployees(); }
+        catch (Exception ex) { message = $"❌ Error: {ex.Message}"; messageType = "error"; }
+        finally { isLoading = false; }
+    }
+
+    private async Task SaveEmployee()
+    {
+        attemptedSubmit = true;
+        message = "";
+        if (!ValidateEmployee()) return;
+        try
+        {
+            await EmployeeService.AddEmployee(employee);
+            message = $"✅ Employee '{employee.FullName}' added successfully!";
+            messageType = "success";
+            employee = new Employee();
+            attemptedSubmit = false;
+            await Load();
+        }
+        catch (Exception ex) { message = $"❌ Error: {ex.Message}"; messageType = "error"; }
+    }
+
+    private void Edit(Employee e)
+    {
+        employee = new Employee { Id = e.Id, FullName = e.FullName, Email = e.Email, Phone = e.Phone, DepartmentId = e.DepartmentId };
+        attemptedSubmit = false;
+        message = "";
+    }
+
+    private async Task UpdateEmployee()
+    {
+        attemptedSubmit = true;
+        message = "";
+        if (!ValidateEmployee()) return;
+        try
+        {
+            await EmployeeService.UpdateEmployee(employee);
+            message = $"✅ Employee '{employee.FullName}' updated successfully!";
+            messageType = "success";
+            employee = new Employee();
+            attemptedSubmit = false;
+            await Load();
+        }
+        catch (Exception ex) { message = $"❌ Error: {ex.Message}"; messageType = "error"; }
+    }
+
+    private async Task Delete(int id)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Delete this employee?"))
+        {
+            try
+            {
+                await EmployeeService.DeleteEmployee(id);
+                message = $"✅ Employee deleted successfully!";
+                messageType = "success";
+                await Load();
+            }
+            catch (Exception ex) { message = $"❌ Error: {ex.Message}"; messageType = "error"; }
+        }
+    }
+
+    private void Cancel()
+    {
+        employee = new Employee();
+        attemptedSubmit = false;
+        message = "";
+    }
+
+    private bool ValidateEmployee()
+    {
+        if (string.IsNullOrWhiteSpace(employee.FullName)) return false;
+        if (string.IsNullOrWhiteSpace(employee.Email)) return false;
+        if (string.IsNullOrWhiteSpace(employee.Phone)) return false;
+        if (employee.DepartmentId == 0) return false;
+        return true;
+    }
+
+    private string GetDepartmentName(int departmentId)
+    {
+        var dept = departments.FirstOrDefault(d => d.Id == departmentId);
+        return dept?.DepartmentName ?? "Unknown";
+    }
+}

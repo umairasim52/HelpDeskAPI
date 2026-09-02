@@ -1,0 +1,74 @@
+﻿@inherits LayoutComponentBase
+
+<div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="sidebar-brand">
+
+            <div class="brand-icon">
+                HD
+            </div>
+
+            <div>
+                <div class="brand-title">
+                    Help Desk
+                </div>
+
+                <div class="brand-subtitle">
+                    Management System
+                </div>
+            </div>
+
+        </div>
+
+        <NavMenu />
+
+        <div class="sidebar-footer">
+
+            <div class="online-dot"></div>
+
+            <span>System Online</span>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN AREA -->
+    <div class="main-area">
+
+        <!-- TOPBAR -->
+        <header class="topbar">
+
+            <div class="page-heading">
+
+                <h1>
+                    Help Desk Management System
+                </h1>
+
+                <span>
+                    Administration Portal
+                </span>
+
+            </div>
+
+           
+            <div class="topbar-actions">
+              
+            </div>
+
+        </header>
+
+
+        <!-- PAGE CONTENT -->
+        <main class="page-content">
+
+            @Body
+
+        </main>
+
+    </div>
+
+</div>

@@ -1,0 +1,285 @@
+﻿@page "/tickets"
+@using HelpDeskBlazor.Models
+@using HelpDeskBlazor.Services
+@using Microsoft.JSInterop
+@inject TicketService TicketService
+@inject EmployeeService EmployeeService
+@inject IJSRuntime JSRuntime
+
+<div class="card shadow mb-4 border-0">
+    <div class="card-header bg-danger text-white">
+        <h3 class="mb-0">🎫 Ticket Management</h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Add, Update and Delete Support Tickets</p>
+    </div>
+</div>
+
+<div class="card shadow border-0 mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12 mb-3">
+                <label class="form-label fw-bold">Title *</label>
+                <input class="form-control" @bind="ticket.Title" placeholder="Enter ticket title" />
+                @if (string.IsNullOrWhiteSpace(ticket.Title) && attemptedSubmit)
+                {
+                    <small class="text-danger">Title is required</small>
+                }
+            </div>
+            <div class="col-12 mb-3">
+                <label class="form-label fw-bold">Description *</label>
+                <textarea class="form-control" rows="3" @bind="ticket.Description" placeholder="Enter description"></textarea>
+                @if (string.IsNullOrWhiteSpace(ticket.Description) && attemptedSubmit)
+                {
+                    <small class="text-danger">Description is required</small>
+                }
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Priority *</label>
+                <select class="form-select" @bind="ticket.Priority">
+                    <option value="">Select Priority</option>
+                    <option value="Low">🟢 Low</option>
+                    <option value="Medium">🟡 Medium</option>
+                    <option value="High">🔴 High</option>
+                    <option value="Critical">🚨 Critical</option>
+                </select>
+                @if (string.IsNullOrWhiteSpace(ticket.Priority) && attemptedSubmit)
+                {
+                    <small class="text-danger">Priority is required</small>
+                }
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Status *</label>
+                <select class="form-select" @bind="ticket.Status">
+                    <option value="">Select Status</option>
+                    <option value="Open">🟢 Open</option>
+                    <option value="In Progress">🟡 In Progress</option>
+                    <option value="Resolved">🔵 Resolved</option>
+                    <option value="Closed">⚫ Closed</option>
+                </select>
+                @if (string.IsNullOrWhiteSpace(ticket.Status) && attemptedSubmit)
+                {
+                    <small class="text-danger">Status is required</small>
+                }
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Assigned Employee *</label>
+                <select class="form-select" @bind="ticket.EmployeeId">
+                    <option value="0">Select Employee</option>
+                    @foreach (var emp in employees)
+                    {
+                        <option value="@emp.Id">@emp.FullName</option>
+                    }
+                </select>
+                @if (ticket.EmployeeId == 0 && attemptedSubmit)
+                {
+                    <small class="text-danger">Please select an employee</small>
+                }
+            </div>
+        </div>
+        <div class="mt-2">
+            @if (ticket.Id == 0)
+            {
+                <button class="btn btn-success" @onclick="SaveTicket">➕ Add Ticket</button>
+            }
+            else
+            {
+                <button class="btn btn-primary" @onclick="UpdateTicket">💾 Update</button>
+                <button class="btn btn-secondary ms-2" @onclick="Cancel">❌ Cancel</button>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert @(messageType == "success" ? "alert-success" : "alert-danger") mt-3">
+                @message
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card shadow border-0">
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+                <p class="mt-2 text-muted">Loading tickets...</p>
+            </div>
+        }
+        else if (tickets.Count == 0)
+        {
+            <div class="text-center py-4">
+                <h5 class="text-muted">No tickets found</h5>
+                <p class="text-muted">Create your first ticket using the form above.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Employee</th>
+                            <th>Created</th>
+                            <th width="180">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in tickets)
+                        {
+                            <tr>
+                                <td>@item.Id</td>
+                                <td>@item.Title</td>
+                                <td><span class="badge @GetPriorityBadgeClass(item.Priority)">@item.Priority</span></td>
+                                <td><span class="badge @GetStatusBadgeClass(item.Status)">@item.Status</span></td>
+                                <td>@GetEmployeeName(item.EmployeeId)</td>
+                                <td>@(item.CreatedDate?.ToString("MMM dd, yyyy HH:mm") ?? "N/A")</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" @onclick="(() => Edit(item))">✏️ Edit</button>
+                                    <button class="btn btn-danger btn-sm ms-2" @onclick="(() => Delete(item.Id))">🗑️ Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<Ticket> tickets = new();
+    private List<Employee> employees = new();
+    private Ticket ticket = new();
+    private bool isLoading = true;
+    private bool attemptedSubmit = false;
+    private string message = "";
+    private string messageType = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmployees();
+        await Load();
+    }
+
+    private async Task LoadEmployees()
+    {
+        try { employees = await EmployeeService.GetEmployees(); }
+        catch (Exception ex) { message = $"❌ Error: {ex.Message}"; messageType = "error"; }
+    }
+
+    private async Task Load()
+    {
+        isLoading = true;
+        try { tickets = await TicketService.GetTickets(); }
+        catch (Exception ex) { message = $"❌ Error: {ex.Message}"; messageType = "error"; }
+        finally { isLoading = false; }
+    }
+
+    private async Task SaveTicket()
+    {
+        attemptedSubmit = true;
+        message = "";
+        if (!ValidateTicket()) return;
+        try
+        {
+            await TicketService.AddTicket(ticket);
+            message = $"✅ Ticket '{ticket.Title}' added successfully!";
+            messageType = "success";
+            ticket = new Ticket();
+            attemptedSubmit = false;
+            await Load();
+        }
+        catch (Exception ex) { message = $"❌ Error: {ex.Message}"; messageType = "error"; }
+    }
+
+    private void Edit(Ticket t)
+    {
+        ticket = new Ticket { Id = t.Id, Title = t.Title, Description = t.Description, Priority = t.Priority, Status = t.Status, EmployeeId = t.EmployeeId, CreatedDate = t.CreatedDate };
+        attemptedSubmit = false;
+        message = "";
+    }
+
+    private async Task UpdateTicket()
+    {
+        attemptedSubmit = true;
+        message = "";
+        if (!ValidateTicket()) return;
+        try
+        {
+            await TicketService.UpdateTicket(ticket);
+            message = $"✅ Ticket '{ticket.Title}' updated successfully!";
+            messageType = "success";
+            ticket = new Ticket();
+            attemptedSubmit = false;
+            await Load();
+        }
+        catch (Exception ex) { message = $"❌ Error: {ex.Message}"; messageType = "error"; }
+    }
+
+    private async Task Delete(int id)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Delete this ticket?"))
+        {
+            try
+            {
+                await TicketService.DeleteTicket(id);
+                message = $"✅ Ticket deleted successfully!";
+                messageType = "success";
+                await Load();
+            }
+            catch (Exception ex) { message = $"❌ Error: {ex.Message}"; messageType = "error"; }
+        }
+    }
+
+    private void Cancel()
+    {
+        ticket = new Ticket();
+        attemptedSubmit = false;
+        message = "";
+    }
+
+    private bool ValidateTicket()
+    {
+        if (string.IsNullOrWhiteSpace(ticket.Title)) return false;
+        if (string.IsNullOrWhiteSpace(ticket.Description)) return false;
+        if (string.IsNullOrWhiteSpace(ticket.Priority)) return false;
+        if (string.IsNullOrWhiteSpace(ticket.Status)) return false;
+        if (ticket.EmployeeId == 0) return false;
+        return true;
+    }
+
+    private string GetPriorityBadgeClass(string? priority)
+    {
+        return priority?.ToLower() switch
+        {
+            "low" => "bg-success",
+            "medium" => "bg-warning text-dark",
+            "high" => "bg-danger",
+            "critical" => "bg-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusBadgeClass(string? status)
+    {
+        return status?.ToLower() switch
+        {
+            "open" => "bg-success",
+            "in progress" => "bg-warning text-dark",
+            "resolved" => "bg-info text-dark",
+            "closed" => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetEmployeeName(int employeeId)
+    {
+        var emp = employees.FirstOrDefault(e => e.Id == employeeId);
+        return emp?.FullName ?? "Unknown";
+    }
+}

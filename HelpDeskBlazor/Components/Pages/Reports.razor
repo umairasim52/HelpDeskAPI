@@ -1,0 +1,195 @@
+﻿@page "/reports"  
+
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Reports - Help Desk</PageTitle>
+
+<div class="mb-4">
+
+    <h1 class="dashboard-title">
+        📊 Reports
+    </h1>
+
+    <p class="text-muted">
+        View and manage Help Desk system information.
+    </p>
+
+</div>
+
+<div class="row g-4">
+
+    <!-- Department Report -->
+    <div class="col-md-6 col-xl-4">
+
+        <div class="report-card">
+
+            <div class="report-icon">
+                🏢
+            </div>
+
+            <h4>
+                Department Report
+            </h4>
+
+            <p>
+                View and manage all departments in the system.
+            </p>
+
+            <NavLink href="/departments"
+                     class="report-btn">
+
+                View Departments
+
+            </NavLink>
+
+        </div>
+
+    </div>
+
+    <!-- Employee Report -->
+    <div class="col-md-6 col-xl-4">
+
+        <div class="report-card">
+
+            <div class="report-icon">
+                👥
+            </div>
+
+            <h4>
+                Employee Report
+            </h4>
+
+            <p>
+                View employee records and management information.
+            </p>
+
+            <NavLink href="/employees"
+                     class="report-btn">
+
+                View Employees
+
+            </NavLink>
+
+        </div>
+
+    </div>
+
+    <!-- Ticket Report -->
+    <div class="col-md-6 col-xl-4">
+
+        <div class="report-card">
+
+            <div class="report-icon">
+                🎫
+            </div>
+
+            <h4>
+                Ticket Report
+            </h4>
+
+            <p>
+                View, update and manage Help Desk tickets.
+            </p>
+
+            <NavLink href="/tickets"
+                     class="report-btn">
+
+                View Tickets
+
+            </NavLink>
+
+        </div>
+
+    </div>
+
+    <!-- System Overview -->
+    <div class="col-12">
+
+        <div class="report-card">
+
+            <div class="d-flex align-items-center gap-3">
+
+                <div class="report-icon mb-0">
+                    📊
+                </div>
+
+                <div>
+
+                    <h4 class="mb-1">
+                        System Overview
+                    </h4>
+
+                    <p class="mb-0">
+                        Help Desk Management System dashboard
+                        reports and operational information.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+    .report-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        height: 100%;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        transition: all 0.3s ease;
+        border: 1px solid #f0f0f0;
+    }
+
+    .report-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+        border-color: #2563eb;
+    }
+
+    .report-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .report-card h4 {
+        margin: 0 0 0.5rem 0;
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    .report-card p {
+        margin: 0 0 1.25rem 0;
+        color: #64748b;
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+
+    .report-btn {
+        display: inline-block;
+        padding: 0.5rem 1.25rem;
+        background: #2563eb;
+        color: white !important;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .report-btn:hover {
+        background: #1d4ed8;
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+    }
+
+    .report-btn:active {
+        transform: scale(0.98);
+    }
+</style>
